@@ -24,7 +24,7 @@ npm start
 # Frontend
 cd ../frontend
 npm install
-echo "VITE_API_URL=https://your-backend.railway.app" > .env
+echo "VITE_API_URL=https://github.com/steja1439/AI-MONEY-MENTOR/blob/main/App.JSX" > .env
 npm run build
 📁 Project Structure
 arthsathi/
@@ -63,7 +63,7 @@ Claude API calls are for narrative generation only
 
 Frontend: React 18, Vite, CSS Variables (dark mode ready)
 Backend: Node.js, Express, Anthropic SDK
-Deploy: GitHub Pages (frontend), Railway/Render (backend)
+Deploy: GitHub Pages (frontend), Render (backend)
 AI: Claude claude-sonnet-4-20250514 via Anthropic API
 
 📄 License
