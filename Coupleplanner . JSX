@@ -1,0 +1,137 @@
+import React, { useState } from 'react'
+import { Field, AIResponse, Disclaimer, MetricRow } from './Shared.jsx'
+import { callClaudeStream } from '../utils/claude.js'
+import { fmt, fmtL, calcOldRegimeTax } from '../utils/finance.js'
+
+export default function CouplePlanner() {
+  const [form, setForm] = useState({
+    aIncome: 1200000, a80C: 80000, aIsMetro: true, aHRA: 144000, aRent: 120000,
+    bIncome: 800000, b80C: 30000, bIsMetro: true, bHRA: 96000, bRent: 96000,
+    combinedExpenses: 80000, goal: 'house',
+  })
+  const [result, setResult] = useState(null)
+  const [aiText, setAiText] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const set = (k) => (e) => setForm(f => ({
+    ...f,
+    [k]: k.includes('Metro') ? e.target.value === 'metro' : +e.target.value
+  }))
+
+  const GOALS = { house: 'Buy a House (5–7 years)', retire: 'Joint Early Retirement', child: "Child's Education" }
+
+  const calculate = async () => {
+    const aTax = calcOldRegimeTax({ income: form.aIncome, deductions80C: form.a80C, hraReceived: form.aHRA, rentPaid: form.aRent, isMetro: form.aIsMetro })
+    const bTax = calcOldRegimeTax({ income: form.bIncome, deductions80C: form.b80C, hraReceived: form.bHRA, rentPaid: form.bRent, isMetro: form.bIsMetro })
+
+    const combined = form.aIncome + form.bIncome
+    const annualExp = form.combinedExpenses * 12
+    const annualSave = combined - annualExp - aTax.tax - bTax.tax
+    const a80CGap = Math.max(0, 150000 - form.a80C)
+    const b80CGap = Math.max(0, 150000 - form.b80C)
+    const totalTaxSave = Math.round(a80CGap * 0.3 + b80CGap * 0.2) // A likely in 30%, B in 20%
+
+    // SIP split based on income ratio
+    const aRatio = form.aIncome / combined
+    const monthlySave = Math.max(0, annualSave / 12)
+    const aSIP = Math.round(monthlySave * aRatio)
+    const bSIP = Math.round(monthlySave * (1 - aRatio))
+
+    setResult({ aTax: aTax.tax, bTax: bTax.tax, combined, annualSave, a80CGap, b80CGap, totalTaxSave, aSIP, bSIP, monthlySave })
+
+    setAiLoading(true)
+    setAiText('')
+    try {
+      await callClaudeStream(
+        `Indian couple financial planning. ` +
+        `Partner A: annual income ${fmtL(form.aIncome)}, 80C used ${fmtL(form.a80C)}/1.5L, tax: ${fmtL(aTax.tax)}, ${form.aIsMetro ? 'metro' : 'non-metro'}. ` +
+        `Partner B: annual income ${fmtL(form.bIncome)}, 80C used ${fmtL(form.b80C)}/1.5L, tax: ${fmtL(bTax.tax)}, ${form.bIsMetro ? 'metro' : 'non-metro'}. ` +
+        `Combined annual income: ${fmtL(combined)}, expenses: ${fmtL(form.combinedExpenses * 12)}, annual savings: ${fmtL(annualSave)}. ` +
+        `Goal: ${GOALS[form.goal]}. ` +
+        `Combined 80C gap: ${fmtL(a80CGap + b80CGap)}, potential tax saving: ${fmtL(totalTaxSave)}. ` +
+        `Recommend: optimal HRA strategy (should one partner pay rent to other?), NPS allocation split, ` +
+        `whose name to hold investments for tax efficiency, joint vs individual insurance, ` +
+        `and goal-specific SIP amounts. Address joint vs separate tax filing in India.`,
+        (chunk) => setAiText(t => t + chunk)
+      )
+    } catch (e) {
+      setAiText('Unable to generate analysis.')
+    }
+    setAiLoading(false)
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h2 style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, marginBottom: 4 }}>Couple's Money Planner</h2>
+        <p style={{ fontSize: 13, color: 'var(--mute)' }}>Optimise across both incomes — India's first AI-powered joint planner</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        {/* Partner A */}
+        <div style={{ border: '0.5px solid var(--border)', borderRadius: 12, padding: '1rem', background: 'var(--bg)' }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--mute)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+            Partner A
+          </div>
+          <Field label="Annual Income (₹)"><input type="number" value={form.aIncome} onChange={set('aIncome')} /></Field>
+          <Field label="HRA Received (₹/yr)"><input type="number" value={form.aHRA} onChange={set('aHRA')} /></Field>
+          <Field label="Rent Paid (₹/yr)"><input type="number" value={form.aRent} onChange={set('aRent')} /></Field>
+          <Field label="80C Invested (₹)"><input type="number" value={form.a80C} onChange={set('a80C')} /></Field>
+          <Field label="City">
+            <select value={form.aIsMetro ? 'metro' : 'nonmetro'} onChange={set('aIsMetro')}>
+              <option value="metro">Metro</option>
+              <option value="nonmetro">Non-Metro</option>
+            </select>
+          </Field>
+        </div>
+
+        {/* Partner B */}
+        <div style={{ border: '0.5px solid var(--border)', borderRadius: 12, padding: '1rem', background: 'var(--bg)' }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--mute)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+            Partner B
+          </div>
+          <Field label="Annual Income (₹)"><input type="number" value={form.bIncome} onChange={set('bIncome')} /></Field>
+          <Field label="HRA Received (₹/yr)"><input type="number" value={form.bHRA} onChange={set('bHRA')} /></Field>
+          <Field label="Rent Paid (₹/yr)"><input type="number" value={form.bRent} onChange={set('bRent')} /></Field>
+          <Field label="80C Invested (₹)"><input type="number" value={form.b80C} onChange={set('b80C')} /></Field>
+          <Field label="City">
+            <select value={form.bIsMetro ? 'metro' : 'nonmetro'} onChange={set('bIsMetro')}>
+              <option value="metro">Metro</option>
+              <option value="nonmetro">Non-Metro</option>
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="form-grid-2">
+        <Field label="Combined Monthly Expenses (₹)"><input type="number" value={form.combinedExpenses} onChange={set('combinedExpenses')} /></Field>
+        <Field label="Primary Financial Goal">
+          <select value={form.goal} onChange={(e) => setForm(f => ({ ...f, goal: e.target.value }))}>
+            {Object.entries(GOALS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <button className="btn-primary" onClick={calculate}>Optimise Our Finances →</button>
+
+      {result && (
+        <div className="fade-in">
+          <div className="card" style={{ marginTop: '1rem' }}>
+            <div className="result-section-title">Combined Financial Picture</div>
+            <MetricRow label="Combined Annual Income" value={fmtL(result.combined)} color="green" />
+            <MetricRow label="Partner A — Annual Tax" value={fmtL(result.aTax)} color="amber" />
+            <MetricRow label="Partner B — Annual Tax" value={fmtL(result.bTax)} color="amber" />
+            <MetricRow label="Annual Investable Surplus" value={fmtL(result.annualSave)} color="green" />
+            <MetricRow label="Partner A — Suggested SIP" value={fmt(result.aSIP) + '/month'} />
+            <MetricRow label="Partner B — Suggested SIP" value={fmt(result.bSIP) + '/month'} />
+            <MetricRow label="Combined 80C Gap" value={fmtL(result.a80CGap + result.b80CGap)} color="amber" />
+            <MetricRow label="Potential Tax Saving" value={fmtL(result.totalTaxSave)} color="green" />
+          </div>
+
+          <AIResponse text={aiText} loading={aiLoading} />
+          <Disclaimer text="Couple's planning strategies are indicative. Tax optimisation (especially HRA strategy) should be verified by a CA. Investment allocation is not SEBI-licensed advice." />
+        </div>
+      )}
+    </div>
+  )
+}
