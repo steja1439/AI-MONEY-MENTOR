@@ -7,7 +7,7 @@ AI-powered personal finance platform that makes financial planning as accessible
 ModuleDescription🔥 FIRE PlannerMonth-by-month roadmap to financial independence💯 Money Score6-dimension financial wellness assessment📋 Tax WizardOld vs New regime comparison with missed deductions🎯 Life Event AdvisorBonus, inheritance, marriage, baby — custom plans💑 Couple PlannerJoint income optimisation across both partners🔬 MF X-RayPortfolio overlap, XIRR, and rebalancing engine
 🚀 Quick Deploy
 Option 1: GitHub Pages (Frontend only — recommended)
-bashgit clone https://github.com/YOUR_USERNAME/arthsathi.git
+bashgit clone https://github.com/steja1439
 cd arthsathi
 npm install
 # Add your Anthropic API key to frontend/.env
