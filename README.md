@@ -47,12 +47,11 @@ arthsathi/
 🔑 Environment Variables
 Frontend (frontend/.env)
 VITE_ANTHROPIC_API_KEY=your_key_here        # Direct API (GitHub Pages)
-VITE_API_URL=http://localhost:3001           # Backend URL (optional)
 VITE_USE_BACKEND=false                      # Set true to use backend proxy
 Backend (backend/.env)
 ANTHROPIC_API_KEY=your_key_here
 PORT=3001
-FRONTEND_URL=https://your-username.github.io
+FRONTEND_URL=https://github.com/steja1439
 ⚖️ Compliance & Disclaimer
 ArthSathi provides AI-generated educational guidance only. It is not a SEBI-registered investment advisor. All recommendations must be verified with a qualified financial professional before acting on them.
 
